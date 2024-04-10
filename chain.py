@@ -79,7 +79,7 @@ def _format_chat_history(chat_history: List[Tuple[str, str]]) -> List:
 def invoke_chain(question: str, chat_history: List[Tuple[str, str]]): 
     # Condense a chat history and follow-up question into a standalone question
     _template = """Given the following conversation and a follow up question, rephrase the follow up question to be a standalone question,
-    in its original language.
+    in its original language. (Make sure to replace any name like "Santander Generales" to "La empresa aseguradora" for privacy reasons) and the term "Mi Hogar Santander Ampliado" to "Mi póliza de seguro de hogar ampliado".)
     Chat History:
     {chat_history}
     Follow Up Input: {question}
