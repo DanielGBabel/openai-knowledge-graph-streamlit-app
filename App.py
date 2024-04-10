@@ -1,3 +1,4 @@
+from langchain_openai import OpenAIEmbeddings
 import streamlit as st
 from langchain.chat_models import ChatOpenAI
 from langchain.graphs import Neo4jGraph
@@ -114,7 +115,7 @@ def process_graph_result_select(result):
     return nodes, edges
 
 # from langchain.agents import initialize_agent
-st.title("The OpenAI Saga")
+st.title("Santander Generales.\nSEGURO MI HOGAR SANTANDER.\nMI PÓLIZA")
 
 NEO4J_URI= st.secrets["NEO4J_URI"]
 NEO4J_USERNAME= st.secrets["NEO4J_USERNAME"]
@@ -126,36 +127,8 @@ graph = Neo4jGraph(
     password=os.environ["NEO4J_PASSWORD"])
 
 # Fetch the unique node types and relationship types for sidebar filters
-node_types = ['Person', 'Organization', 'Group', 'Topic']
-relationship_types = [
-    'BELONGS_TO', 'FORMER_CEO_OF', 'CEO_OF', 'FORMER_MEMBER_OF', 'CURRENT_MEMBER_OF','REMAIN_MEMBER_OF', 'SCHEDULES_CALL_WITH',
-    'QUESTIONED_FIRING_SAM', 'FOUNDED_BY', 'INVESTED_IN', 'CONSIDERS_BOARD_SEAT', 'FORMER_CTO_OF', 'INFORMED_OF_FIRING', 'FIRED_AS_CEO',
-    'ALL_HANDS_MEETING', 'RESIGNS_FROM', 'APPOINTED_INTERIM_CEO', 'JOINS_MICROSOFT', 'THREATEN_TO_RESIGN', 'CONSIDERS_MERGER_WITH',
-    'IN_TALKS_WITH_BOARD', 'RETURNS_AS_CEO', 'RETURNS_TO', 'CONSIDERS_BOARD_SEAT', 'AIMS_TO_DEVELOP_AGI_WITH', 'QUESTIONED_FIRING_SAM',
-    'FOUNDED_BY', 'INVESTED_IN', 'DEMOTED_FROM', 'RELEASES_HIRING_STATEMENT', 'HIRED_BY', 'REGRETS_FIRING','MENTIONS', 'EXPLAINS_DECISIONS', 'DESCRIBES', 'FORMER_PRESIDENT']
-
-st.sidebar.header('Filters')
-selected_node_types = st.sidebar.multiselect('Node Types', node_types, default=node_types)
-selected_relationship_types = st.sidebar.multiselect('Relationship Types', relationship_types, default=relationship_types)
-
-# Initialize state variables and check for changes in selections
-if 'prev_node_types' not in st.session_state:
-    st.session_state.prev_node_types = selected_node_types
-if 'prev_relationship_types' not in st.session_state:
-    st.session_state.prev_relationship_types = selected_relationship_types
-
-# Update graph if selections change
-if (selected_node_types != st.session_state.prev_node_types or 
-    selected_relationship_types != st.session_state.prev_relationship_types):
-    st.session_state.prev_node_types = selected_node_types
-    st.session_state.prev_relationship_types = selected_relationship_types
-    # Construct and fetch new graph data
-    cypher_query = construct_cypher_query(selected_node_types, selected_relationship_types)
-    nodes, edges = fetch_graph_data(nodesType=selected_node_types, relType=selected_relationship_types)
-    # Define the configuration for the graph visualization
-    config = Config(height=600, width=800, directed=True, nodeHighlightBehavior=True, highlightColor="#F7A7A6")
-    # Render the graph using agraph with the specified configuration
-    agraph(nodes=nodes, edges=edges, config=config)
+node_types = ['__Entity__','Document']
+relationship_types = []
 
 
 with st.sidebar:
@@ -169,7 +142,7 @@ def combine_contexts(structured, unstructured, client):
                  Pleass summarize text from the following and generate\
                  a comprehensive, logical and context_aware answer.'},
                 {'role': 'user', 'content': structured + unstructured}]
-    completion = client.chat.completions.create(model="gpt-4",
+    completion = client.chat.completions.create(model="gpt-4-turbo",
                                                 messages=messages,
                                                 temperature=0)
     response = completion.choices[0].message.content
@@ -180,19 +153,16 @@ def combine_contexts(structured, unstructured, client):
 if openai_api_key:
     client = OpenAI(api_key=openai_api_key)
     os.environ["OPENAI_API_KEY"] = openai_api_key
-    from retrievers import initialize_retrievers
-    from chain import initialize_chain, Question
-    typical_rag, parent_vectorstore, hypothetic_question_vectorstore, summary_vectorstore = initialize_retrievers(openai_api_key)
-    chain_txt = initialize_chain(openai_api_key, typical_rag, parent_vectorstore, hypothetic_question_vectorstore, summary_vectorstore)
-
+    from retrievers import final_retriever
+   
 # Chat interface
 if "messages" not in st.session_state:
-    st.session_state["messages"] = [{"role": "assistant", "content": "Hi there, ask me a question."}]
+    st.session_state["messages"] = [{"role": "assistant", "content": "Hola, hazme una pregunta sobre tu póliza de seguro."}]
 
 for msg in st.session_state.messages:
     st.chat_message(msg["role"]).write(msg["content"])
 
-if prompt := st.chat_input(placeholder="Ask a question"):
+if prompt := st.chat_input(placeholder="Pregunta sobre tu poliza de seguro"):
     if not openai_api_key:
         st.error("Please add your OpenAI API key to continue.")
     else:
@@ -200,23 +170,22 @@ if prompt := st.chat_input(placeholder="Ask a question"):
         # Initialize the GraphCypherQAChain from chain.py
         from langchain.chains import GraphCypherQAChain
         cypher_chain = GraphCypherQAChain.from_llm(
-            cypher_llm=ChatOpenAI(temperature=0, model_name='gpt-4', api_key=openai_api_key),
+            cypher_llm=ChatOpenAI(temperature=0, model_name='gpt-4-turbo', api_key=openai_api_key),
             qa_llm=ChatOpenAI(temperature=0, api_key=openai_api_key),
             graph=graph,
             verbose=True,
             return_intermediate_steps=True
 )
+        from langchain_community.vectorstores import Neo4jVector
+        from chain import invoke_chain
+       
+        
         # Update session state with new message
         st.session_state.messages.append({"role": "user", "content": prompt})
         st.chat_message("user").write(prompt)
-        response_structured, nodes, edges= process_query(prompt)
-        response_nonstructured = chain_txt.invoke(
-                {"question": prompt},
-                {"configurable": {"strategy": "parent_strategy"}},
-            )
+        # Process the query and return the response
         config = Config(height=600, width=800, directed=True, nodeHighlightBehavior=True, highlightColor="#F7A7A6")
-        final_ans = combine_contexts(response_structured, response_nonstructured, client)
+        final_ans = invoke_chain(question=prompt,chat_history=st.session_state.messages)
         st.session_state.messages.append({"role": "assistant", "content": final_ans})
         st.chat_message("assistant").write(final_ans)
-        agraph(nodes=nodes, edges=edges, config=config)
 
