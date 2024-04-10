@@ -115,7 +115,7 @@ def process_graph_result_select(result):
     return nodes, edges
 
 # from langchain.agents import initialize_agent
-st.title("Santander Generales.\nSEGURO MI HOGAR SANTANDER.\nMI PÓLIZA")
+st.title("AMAINE.\nSEGURO HOGAR AMAINE.\nMI PÓLIZA")
 
 NEO4J_URI= st.secrets["NEO4J_URI"]
 NEO4J_USERNAME= st.secrets["NEO4J_USERNAME"]
@@ -157,7 +157,7 @@ if openai_api_key:
    
 # Chat interface
 if "messages" not in st.session_state:
-    st.session_state["messages"] = [{"role": "assistant", "content": "Hola, hazme una pregunta sobre tu póliza de seguro."}]
+    st.session_state["messages"] = [{"role": "assistant", "content": "Hola, soy un asistente de seguros AMAINE, hazme una pregunta sobre tu póliza de seguro."}]
 
 for msg in st.session_state.messages:
     st.chat_message(msg["role"]).write(msg["content"])
