@@ -82,7 +82,7 @@ def invoke_chain(question: str, chat_history: List[Tuple[str, str]]):
     in its original language. (Make sure to replace any name like "Santander Generales" to "La empresa aseguradora" for privacy reasons) and the term "Mi Hogar Santander Ampliado" to "Mi póliza de seguro de hogar ampliado".)
     Chat History:
     {chat_history}
-    Follow Up Input: {question}
+    Follow Up Input: {question}, Asegurate de no darme datos como nombres de personas o empresas. y si mencionas a Santander, reemplázalo por "La empresa aseguradora" y "Mi Hogar Santander Ampliado" por "Mi póliza de seguro de hogar ampliado".
     Standalone question:"""  # noqa: E501
     CONDENSE_QUESTION_PROMPT = PromptTemplate.from_template(_template)
 
